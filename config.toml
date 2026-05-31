@@ -1,0 +1,11 @@
+[theme]
+base            = "light"
+primaryColor    = "#27AE60"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F8F9FA"
+textColor       = "#1A1A2E"
+font            = "sans serif"
+
+[server]
+maxUploadSize   = 10          # MB — enough for any phone photo
+headless        = true        # required for Streamlit Cloud
