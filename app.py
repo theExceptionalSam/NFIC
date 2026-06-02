@@ -37,7 +37,7 @@ st.set_page_config(
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────
 CHECKPOINT_PATH = "checkpoints/best_fold0.pth"   # path relative to app.py
-IMG_SIZE        = 224
+IMG_SIZE        = 288
 DEVICE          = torch.device("cpu")             # Streamlit Cloud → CPU only
 TOP_K           = 5
 
