@@ -13,9 +13,9 @@ from PIL import Image
 from pathlib import Path
 import plotly.graph_objects as go
 import timm
-    ML_AVAILABLE = True
+ML_AVAILABLE = True
 except ImportError:
-    ML_AVAILABLE = False
+ML_AVAILABLE = False
  
 try:
     from pytorch_grad_cam import GradCAMPlusPlus
