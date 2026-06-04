@@ -313,18 +313,13 @@ def gradcam_overlay(img_pil: Image.Image, model: nn.Module, class_idx: int):
     except ImportError:
         return None
  
-     try:
-        target_layer = model.backbone.conv_head
-    except Exception:
-        target_layer = [
-            m for m in model.backbone.modules()
-            if isinstance(m, nn.Conv2d)
-        ][-1]
-    
-    cam = GradCAMPlusPlus(
-        model=model,
-        target_layers=[target_layer]
-    )
+       try:
+           target_layer = model.backbone.conv_head
+       except Exception:
+           target_layer = [
+               m for m in model.backbone.modules()
+               if isinstance(m, nn.Conv2d)
+           ][-1]
  
     img_np  = np.array(img_pil.convert("RGB").resize((IMG_SIZE, IMG_SIZE)), dtype=np.uint8)
     img_f32 = img_np.astype(np.float32) / 255.0
