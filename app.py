@@ -194,22 +194,22 @@ def inject_styles():
  
     /* ── Columns gap fix ──────────────────────────── */
     [data-testid="column"] { gap: 0 !important; }
+    @media (max-width: 768px){
+
+    [data-testid="block-container"]{
+        padding:1rem !important;
+    }
+
+    h1{
+        font-size:2rem !important;
+    }
+
+    [data-testid="stMetricValue"]{
+        font-size:1.4rem !important;
+    }
+}
     </style>
     """, unsafe_allow_html=True)
-      @media (max-width: 768px){
-    
-        [data-testid="block-container"]{
-            padding:1rem !important;
-        }
-    
-        h1{
-            font-size:2rem !important;
-        }
-    
-        [data-testid="stMetricValue"]{
-            font-size:1.4rem !important;
-        }
-    }
  
  
 # ─────────────────────────────────────────────────────────────
