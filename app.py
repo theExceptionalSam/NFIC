@@ -1,26 +1,22 @@
-    import io
-    import time
-    import warnings
-    import numpy as np
-    import streamlit as st
-    import torch
-    import torch.nn as nn
-    import torch.nn.functional as F
-    import albumentations as A
-    from albumentations.pytorch import ToTensorV2
-    from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-    from PIL import Image
-    from pathlib import Path
-    import plotly.graph_objects as go
-    import timm
-    ML_AVAILABLE = True
-except ImportError:
-    ML_AVAILABLE = False
- 
-try:
-    from pytorch_grad_cam import GradCAMPlusPlus
-    from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-    from pytorch_grad_cam.utils.image import show_cam_on_image
+import io
+import time
+import warnings
+import numpy as np
+import streamlit as st
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+from timm.data import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from PIL import Image
+from pathlib import Path
+import plotly.graph_objects as go
+import timm
+
+from pytorch_grad_cam import GradCAMPlusPlus
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+from pytorch_grad_cam.utils.image import show_cam_on_image
     GRADCAM_AVAILABLE = True
 except ImportError:
     GRADCAM_AVAILABLE = False
