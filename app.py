@@ -37,20 +37,6 @@ TOP_K           = 5
 # GLOBAL STYLES
 # ─────────────────────────────────────────────────────────────
 def inject_styles():
-     @media (max-width: 768px){
-    
-        [data-testid="block-container"]{
-            padding:1rem !important;
-        }
-    
-        h1{
-            font-size:2rem !important;
-        }
-    
-        [data-testid="stMetricValue"]{
-            font-size:1.4rem !important;
-        }
-    }
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -210,6 +196,20 @@ def inject_styles():
     [data-testid="column"] { gap: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
+      @media (max-width: 768px){
+    
+        [data-testid="block-container"]{
+            padding:1rem !important;
+        }
+    
+        h1{
+            font-size:2rem !important;
+        }
+    
+        [data-testid="stMetricValue"]{
+            font-size:1.4rem !important;
+        }
+    }
  
  
 # ─────────────────────────────────────────────────────────────
