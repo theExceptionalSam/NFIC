@@ -1,10 +1,3 @@
-"""
-🍛 Nigerian Food Classifier — Redesigned Streamlit App
-Warm editorial dark UI with terracotta / amber palette.
-Loads a trained EfficientNetV2 model and classifies Nigerian food images.
-"""
-
-import io
 import time
 import warnings
 import numpy as np
@@ -19,9 +12,9 @@ from PIL import Image
 from pathlib import Path
 import plotly.graph_objects as go
 import timm
-
+ 
 warnings.filterwarnings("ignore")
-
+ 
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG  (must be the very first Streamlit call)
 # ─────────────────────────────────────────────────────────────
@@ -31,7 +24,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
-
+ 
 # ─────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────
@@ -39,7 +32,7 @@ CHECKPOINT_PATH = "checkpoints/best_fold0.pth"
 IMG_SIZE        = 288
 DEVICE          = torch.device("cpu")
 TOP_K           = 5
-
+ 
 # ─────────────────────────────────────────────────────────────
 # GLOBAL STYLES
 # ─────────────────────────────────────────────────────────────
@@ -47,7 +40,7 @@ def inject_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
-
+ 
     /* ── Reset & base ─────────────────────────────── */
     html, body, [data-testid="stAppViewContainer"],
     [data-testid="stMain"], [data-testid="block-container"] {
@@ -55,33 +48,33 @@ def inject_styles():
         color: #FAF5EE !important;
         font-family: 'DM Sans', sans-serif !important;
     }
-
+ 
     /* Hide Streamlit chrome */
     #MainMenu, footer, header,
     [data-testid="stToolbar"],
     [data-testid="stDecoration"] { display: none !important; }
-
+ 
     /* ── Sidebar ──────────────────────────────────── */
     [data-testid="stSidebar"] {
         background: #221B0F !important;
         border-right: 0.5px solid rgba(250,245,238,0.08) !important;
     }
     [data-testid="stSidebar"] * { color: #B8A898 !important; }
-
+ 
     /* ── Block padding ────────────────────────────── */
     [data-testid="block-container"] {
         padding: 0 2.5rem 3rem !important;
         max-width: 1100px !important;
         margin: 0 auto !important;
     }
-
+ 
     /* ── Headings ─────────────────────────────────── */
     h1, h2, h3 {
         font-family: 'Playfair Display', Georgia, serif !important;
         color: #FAF5EE !important;
         letter-spacing: -0.02em !important;
     }
-
+ 
     /* ── Metrics ──────────────────────────────────── */
     [data-testid="stMetric"] {
         background: #2C2218 !important;
@@ -101,7 +94,7 @@ def inject_styles():
         color: #7A6A5A !important;
     }
     [data-testid="stMetricDelta"] { display: none !important; }
-
+ 
     /* ── File uploader ────────────────────────────── */
     [data-testid="stFileUploader"] {
         background: #2C2218 !important;
@@ -123,7 +116,7 @@ def inject_styles():
         font-family: 'DM Sans', sans-serif !important;
         font-weight: 500 !important;
     }
-
+ 
     /* ── Buttons ──────────────────────────────────── */
     [data-testid="stButton"] > button {
         background: transparent !important;
@@ -140,14 +133,14 @@ def inject_styles():
         color: #E8855A !important;
         background: rgba(196,83,42,0.1) !important;
     }
-
+ 
     /* ── Toggle / Checkbox ────────────────────────── */
     [data-testid="stCheckbox"] label,
     [data-testid="stToggle"] label {
         color: #B8A898 !important;
         font-size: 0.85rem !important;
     }
-
+ 
     /* ── Selectbox ────────────────────────────────── */
     [data-testid="stSelectbox"] > div > div {
         background: #2C2218 !important;
@@ -155,34 +148,34 @@ def inject_styles():
         border-radius: 8px !important;
         color: #FAF5EE !important;
     }
-
+ 
     /* ── Plotly chart container ───────────────────── */
     [data-testid="stPlotlyChart"] {
         background: transparent !important;
     }
-
+ 
     /* ── Divider ──────────────────────────────────── */
     hr {
         border-color: rgba(250,245,238,0.08) !important;
         margin: 1.5rem 0 !important;
     }
-
+ 
     /* ── Image ────────────────────────────────────── */
     [data-testid="stImage"] img {
         border-radius: 14px !important;
         border: 0.5px solid rgba(250,245,238,0.08) !important;
     }
-
+ 
     /* ── Caption / small text ─────────────────────── */
     [data-testid="stCaptionContainer"] p,
     .stCaption, small {
         color: #7A6A5A !important;
         font-size: 0.72rem !important;
     }
-
+ 
     /* ── Spinner ──────────────────────────────────── */
     [data-testid="stSpinner"] p { color: #B8A898 !important; }
-
+ 
     /* ── Alerts / info ────────────────────────────── */
     [data-testid="stAlert"] {
         background: rgba(196,83,42,0.08) !important;
@@ -190,7 +183,7 @@ def inject_styles():
         border-radius: 12px !important;
         color: #FAF5EE !important;
     }
-
+ 
     /* ── Expander ─────────────────────────────────── */
     [data-testid="stExpander"] {
         background: #2C2218 !important;
@@ -198,13 +191,13 @@ def inject_styles():
         border-radius: 12px !important;
     }
     [data-testid="stExpander"] summary { color: #B8A898 !important; }
-
+ 
     /* ── Columns gap fix ──────────────────────────── */
     [data-testid="column"] { gap: 0 !important; }
     </style>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # MODEL DEFINITION
 # ─────────────────────────────────────────────────────────────
@@ -225,14 +218,14 @@ class NigerianFoodClassifier(nn.Module):
             nn.Dropout(p=dropout),
             nn.Linear(feat_dim // 2, num_classes),
         )
-
+ 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.head(self.backbone(x))
-
+ 
     def get_features(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # TRANSFORMS
 # ─────────────────────────────────────────────────────────────
@@ -255,16 +248,16 @@ def _tfm(img_size: int, flip: bool = False, brightness: float = 0.0,
         ToTensorV2(),
     ]
     return A.Compose(steps)
-
-
+ 
+ 
 TTA_TRANSFORMS = [
     _tfm(IMG_SIZE),
     _tfm(IMG_SIZE, flip=True),
     _tfm(IMG_SIZE, brightness=0.1),
     _tfm(IMG_SIZE, crop_frac=0.9),
 ]
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # MODEL LOADING
 # ─────────────────────────────────────────────────────────────
@@ -278,8 +271,8 @@ def load_model(checkpoint_path: str):
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     return model, ckpt["class_names"]
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # INFERENCE
 # ─────────────────────────────────────────────────────────────
@@ -293,8 +286,8 @@ def predict(img_pil: Image.Image, model: nn.Module, use_tta: bool = True):
         probs = F.softmax(model(x), dim=1)[0].cpu().numpy()
         all_probs.append(probs)
     return np.mean(all_probs, axis=0)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # GRAD-CAM
 # ─────────────────────────────────────────────────────────────
@@ -305,25 +298,25 @@ def gradcam_overlay(img_pil: Image.Image, model: nn.Module, class_idx: int):
         from pytorch_grad_cam.utils.image import show_cam_on_image
     except ImportError:
         return None
-
+ 
     last_conv = None
     for m in model.backbone.modules():
         if isinstance(m, nn.Conv2d):
             last_conv = m
     if last_conv is None:
         return None
-
+ 
     img_np  = np.array(img_pil.convert("RGB").resize((IMG_SIZE, IMG_SIZE)), dtype=np.uint8)
     img_f32 = img_np.astype(np.float32) / 255.0
     tfm     = TTA_TRANSFORMS[0]
     x       = tfm(image=img_np)["image"].unsqueeze(0).to(DEVICE)
-
+ 
     cam     = GradCAMPlusPlus(model=model, target_layers=[last_conv])
     mask    = cam(input_tensor=x, targets=[ClassifierOutputTarget(class_idx)])[0]
     overlay = show_cam_on_image(img_f32, mask, use_rgb=True)
     return Image.fromarray(overlay)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # CONFIDENCE CHART  (dark theme)
 # ─────────────────────────────────────────────────────────────
@@ -333,7 +326,7 @@ def confidence_chart(class_names, probs, top_k=5):
     values  = [float(probs[i]) for i in top_idx][::-1]
     colors  = ["#E8855A" if i == len(values) - 1 else "rgba(196,83,42,0.45)"
                for i in range(len(values))]
-
+ 
     fig = go.Figure(go.Bar(
         x            = values,
         y            = names,
@@ -369,8 +362,8 @@ def confidence_chart(class_names, probs, top_k=5):
         ),
     )
     return fig
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # HTML HELPERS
 # ─────────────────────────────────────────────────────────────
@@ -417,8 +410,8 @@ def nav_bar():
     }
     </style>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 def hero_headline():
     st.markdown("""
     <div style="margin-bottom: 2.5rem;">
@@ -442,8 +435,8 @@ def hero_headline():
         </p>
     </div>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 def prediction_badge(food_name: str, confidence: float):
     if confidence >= 0.6:
         color, bg = "#E8855A", "rgba(196,83,42,0.12)"
@@ -454,7 +447,7 @@ def prediction_badge(food_name: str, confidence: float):
     else:
         color, bg = "#E05C5C", "rgba(224,92,92,0.1)"
         border     = "rgba(224,92,92,0.35)"
-
+ 
     st.markdown(f"""
     <div style="
         background:{bg}; border:1px solid {border};
@@ -495,8 +488,8 @@ def prediction_badge(food_name: str, confidence: float):
         </div>
     </div>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 def inference_meta_strip(elapsed_ms: float, use_tta: bool, num_classes: int):
     tta_label = "TTA ×4 on" if use_tta else "TTA off"
     st.markdown(f"""
@@ -520,8 +513,8 @@ def inference_meta_strip(elapsed_ms: float, use_tta: bool, num_classes: int):
         </span>
     </div>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 def section_label(text: str):
     st.markdown(f"""
     <p style="
@@ -530,8 +523,8 @@ def section_label(text: str):
         margin:0 0 0.6rem;
     ">{text}</p>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 def footer():
     st.markdown("""
     <hr style="border-color:rgba(250,245,238,0.08);margin:3rem 0 1.5rem;">
@@ -548,8 +541,8 @@ def footer():
         </p>
     </div>
     """, unsafe_allow_html=True)
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────
@@ -563,20 +556,20 @@ def sidebar(class_names):
         ">Settings</p>
         """, unsafe_allow_html=True)
         st.markdown("<hr>", unsafe_allow_html=True)
-
+ 
         use_tta  = st.toggle("Test-Time Augmentation", value=True,
                              help="Averages 4 views — more accurate, slightly slower")
         show_cam = st.toggle("Grad-CAM Overlay", value=False,
                              help="Highlights which part of the image drove the prediction")
         top_k    = st.selectbox("Top-K predictions", [3, 5, 10], index=1)
-
+ 
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("""
         <p style="font-size:0.65rem;text-transform:uppercase;
                    letter-spacing:0.08em;color:#7A6A5A;margin-bottom:0.5rem;">
             Model info
         </p>""", unsafe_allow_html=True)
-
+ 
         info_rows = [
             ("Architecture", "EfficientNetV2-M"),
             ("Classes",      str(len(class_names))),
@@ -592,14 +585,14 @@ def sidebar(class_names):
                 <span style="font-size:0.75rem;color:#B8A898;font-weight:500;">{val}</span>
             </div>
             """, unsafe_allow_html=True)
-
+ 
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("""
         <p style="font-size:0.65rem;text-transform:uppercase;
                    letter-spacing:0.08em;color:#7A6A5A;margin-bottom:0.5rem;">
             All classes
         </p>""", unsafe_allow_html=True)
-
+ 
         for name in sorted(class_names):
             st.markdown(f"""
             <div style="
@@ -609,16 +602,16 @@ def sidebar(class_names):
                 margin:2px 2px; font-size:0.7rem; color:#B8A898;
             ">{name}</div>
             """, unsafe_allow_html=True)
-
+ 
     return use_tta, show_cam, top_k
-
-
+ 
+ 
 # ─────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────
 def main():
     inject_styles()
-
+ 
     # ── Load model ───────────────────────────────────────────
     if not Path(CHECKPOINT_PATH).exists():
         st.markdown("""
@@ -638,26 +631,26 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         st.stop()
-
+ 
     model, class_names = load_model(CHECKPOINT_PATH)
-
+ 
     # ── Sidebar ──────────────────────────────────────────────
     use_tta, show_cam, top_k = sidebar(class_names)
-
+ 
     # ── Nav + Hero ───────────────────────────────────────────
     nav_bar()
-
+ 
     col_hero, col_upload = st.columns([1.1, 1], gap="large")
-
+ 
     with col_hero:
         hero_headline()
-
+ 
         # Stat row
         m1, m2, m3 = st.columns(3)
         m1.metric("Food classes", len(class_names))
         m2.metric("Macro F1",     "80.8%")
         m3.metric("Inference",    "<200 ms")
-
+ 
     with col_upload:
         st.markdown("""
         <div style="
@@ -674,15 +667,15 @@ def main():
             </p>
         </div>
         """, unsafe_allow_html=True)
-
+ 
         uploaded = st.file_uploader(
             "Upload food image",
             type=["jpg", "jpeg", "png", "webp"],
             label_visibility="collapsed",
         )
-
+ 
     st.markdown("<div style='margin-top:2.5rem'></div>", unsafe_allow_html=True)
-
+ 
     # ── No image state ────────────────────────────────────────
     if uploaded is None:
         st.markdown("""
@@ -699,43 +692,43 @@ def main():
         """, unsafe_allow_html=True)
         footer()
         return
-
+ 
     # ── Divider ───────────────────────────────────────────────
     st.markdown("<hr>", unsafe_allow_html=True)
-
+ 
     # ── Layout: image | results ───────────────────────────────
     col_img, col_res = st.columns([1, 1], gap="large")
-
+ 
     img_pil = Image.open(uploaded).convert("RGB")
-
+ 
     with col_img:
         section_label("Uploaded image")
         st.image(img_pil, use_container_width=True)
         st.caption(f"Size: {img_pil.width}×{img_pil.height} px")
-
+ 
     with col_res:
         section_label("Prediction")
-
+ 
         with st.spinner("Classifying…"):
             t0      = time.time()
             probs   = predict(img_pil, model, use_tta=use_tta)
             elapsed = (time.time() - t0) * 1000
-
+ 
         top_idx   = int(probs.argmax())
         top_class = class_names[top_idx]
         top_conf  = float(probs[top_idx])
-
+ 
         prediction_badge(top_class, top_conf)
-
+ 
         section_label(f"Top {top_k} predictions")
         st.plotly_chart(
             confidence_chart(class_names, probs, top_k),
             use_container_width=True,
             config={"displayModeBar": False},
         )
-
+ 
         inference_meta_strip(elapsed, use_tta, len(class_names))
-
+ 
     # ── Grad-CAM ──────────────────────────────────────────────
     if show_cam:
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -748,10 +741,10 @@ def main():
             Warm regions drove the classification; cool regions were ignored.
         </p>
         """, unsafe_allow_html=True)
-
+ 
         with st.spinner("Generating attention map…"):
             overlay = gradcam_overlay(img_pil, model, top_idx)
-
+ 
         if overlay is not None:
             c1, c2, c3 = st.columns([1, 1, 1])
             with c1:
@@ -792,9 +785,9 @@ def main():
                 </p>
             </div>
             """, unsafe_allow_html=True)
-
+ 
     footer()
-
-
+ 
+ 
 if __name__ == "__main__":
     main()
