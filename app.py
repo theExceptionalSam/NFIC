@@ -17,9 +17,6 @@ import timm
 from pytorch_grad_cam import GradCAMPlusPlus
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
-    GRADCAM_AVAILABLE = True
-except ImportError:
-    GRADCAM_AVAILABLE = False
 
 warnings.filterwarnings("ignore")
 
