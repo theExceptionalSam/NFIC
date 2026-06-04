@@ -31,6 +31,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+st.sidebar.success("Sidebar is working")
 
 # ─────────────────────────────────────────────────────────────
 # CONSTANTS
@@ -59,10 +60,10 @@ def inject_styles():
     /* Hide Streamlit chrome */
     #MainMenu, footer, header,
     [data-testid="stToolbar"],
-    [data-testid="stDecoration"] { display: none !important; }
+    [data-testid="stDecoration"]
 
     /* ── Sidebar ──────────────────────────────────── */
-    [data-testid="stSidebar"] {
+    section[data-testid="stSidebar"] > div {
         background: #221B0F !important;
         border-right: 0.5px solid rgba(250,245,238,0.08) !important;
     }
