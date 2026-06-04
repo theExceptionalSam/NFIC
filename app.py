@@ -1,3 +1,10 @@
+"""
+🍛 Nigerian Food Classifier — Redesigned Streamlit App
+Warm editorial dark UI with terracotta / amber palette.
+Loads a trained EfficientNetV2 model and classifies Nigerian food images.
+"""
+
+import io
 import time
 import warnings
 import numpy as np
@@ -12,9 +19,9 @@ from PIL import Image
 from pathlib import Path
 import plotly.graph_objects as go
 import timm
- 
+
 warnings.filterwarnings("ignore")
- 
+
 # ─────────────────────────────────────────────────────────────
 # PAGE CONFIG  (must be the very first Streamlit call)
 # ─────────────────────────────────────────────────────────────
@@ -22,9 +29,9 @@ st.set_page_config(
     page_title="Naija Eats",
     page_icon="🍛",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
- 
+
 # ─────────────────────────────────────────────────────────────
 # CONSTANTS
 # ─────────────────────────────────────────────────────────────
@@ -32,7 +39,7 @@ CHECKPOINT_PATH = "checkpoints/best_fold0.pth"
 IMG_SIZE        = 288
 DEVICE          = torch.device("cpu")
 TOP_K           = 5
- 
+
 # ─────────────────────────────────────────────────────────────
 # GLOBAL STYLES
 # ─────────────────────────────────────────────────────────────
@@ -40,44 +47,44 @@ def inject_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
- 
+
     /* ── Reset & base ─────────────────────────────── */
     html, body, [data-testid="stAppViewContainer"],
     [data-testid="stMain"], [data-testid="block-container"] {
-        background-color: #FFF8F0 !important;
-        color: #2B2D42 !important;
+        background-color: #1A1208 !important;
+        color: #FAF5EE !important;
         font-family: 'DM Sans', sans-serif !important;
     }
- 
+
     /* Hide Streamlit chrome */
     #MainMenu, footer, header,
     [data-testid="stToolbar"],
     [data-testid="stDecoration"] { display: none !important; }
- 
+
     /* ── Sidebar ──────────────────────────────────── */
     [data-testid="stSidebar"] {
         background: #221B0F !important;
         border-right: 0.5px solid rgba(250,245,238,0.08) !important;
     }
     [data-testid="stSidebar"] * { color: #B8A898 !important; }
- 
+
     /* ── Block padding ────────────────────────────── */
     [data-testid="block-container"] {
         padding: 0 2.5rem 3rem !important;
         max-width: 1100px !important;
         margin: 0 auto !important;
     }
- 
+
     /* ── Headings ─────────────────────────────────── */
     h1, h2, h3 {
         font-family: 'Playfair Display', Georgia, serif !important;
         color: #FAF5EE !important;
         letter-spacing: -0.02em !important;
     }
- 
+
     /* ── Metrics ──────────────────────────────────── */
     [data-testid="stMetric"] {
-        background: #FFFFFF !important;
+        background: #2C2218 !important;
         border: 0.5px solid rgba(250,245,238,0.08) !important;
         border-radius: 14px !important;
         padding: 1rem 1.25rem !important;
@@ -85,30 +92,30 @@ def inject_styles():
     [data-testid="stMetricValue"] {
         font-family: 'Playfair Display', serif !important;
         font-size: 2rem !important;
-        color: #E85D04 !important;
+        color: #E8855A !important;
     }
     [data-testid="stMetricLabel"] {
         font-size: 0.7rem !important;
         text-transform: uppercase !important;
         letter-spacing: 0.08em !important;
-        color: #6C757D !important;
+        color: #7A6A5A !important;
     }
     [data-testid="stMetricDelta"] { display: none !important; }
- 
+
     /* ── File uploader ────────────────────────────── */
     [data-testid="stFileUploader"] {
-        background: #FFFFFF !important;
+        background: #2C2218 !important;
         border: 1.5px dashed rgba(196,83,42,0.4) !important;
         border-radius: 18px !important;
         padding: 2rem !important;
         transition: border-color 0.2s !important;
     }
     [data-testid="stFileUploader"]:hover {
-        border-color: #E85D04 !important;
+        border-color: #C4532A !important;
     }
     [data-testid="stFileUploader"] * { color: #B8A898 !important; }
     [data-testid="stFileUploader"] button {
-        background: #E85D04 !important;
+        background: #C4532A !important;
         color: #FAF5EE !important;
         border: none !important;
         border-radius: 100px !important;
@@ -116,7 +123,7 @@ def inject_styles():
         font-family: 'DM Sans', sans-serif !important;
         font-weight: 500 !important;
     }
- 
+
     /* ── Buttons ──────────────────────────────────── */
     [data-testid="stButton"] > button {
         background: transparent !important;
@@ -129,53 +136,53 @@ def inject_styles():
         transition: all 0.2s !important;
     }
     [data-testid="stButton"] > button:hover {
-        border-color: #E85D04 !important;
-        color: #E85D04 !important;
+        border-color: #C4532A !important;
+        color: #E8855A !important;
         background: rgba(196,83,42,0.1) !important;
     }
- 
+
     /* ── Toggle / Checkbox ────────────────────────── */
     [data-testid="stCheckbox"] label,
     [data-testid="stToggle"] label {
         color: #B8A898 !important;
         font-size: 0.85rem !important;
     }
- 
+
     /* ── Selectbox ────────────────────────────────── */
     [data-testid="stSelectbox"] > div > div {
-        background: #FFFFFF !important;
+        background: #2C2218 !important;
         border: 0.5px solid rgba(250,245,238,0.1) !important;
         border-radius: 8px !important;
         color: #FAF5EE !important;
     }
- 
+
     /* ── Plotly chart container ───────────────────── */
     [data-testid="stPlotlyChart"] {
         background: transparent !important;
     }
- 
+
     /* ── Divider ──────────────────────────────────── */
     hr {
         border-color: rgba(250,245,238,0.08) !important;
         margin: 1.5rem 0 !important;
     }
- 
+
     /* ── Image ────────────────────────────────────── */
     [data-testid="stImage"] img {
         border-radius: 14px !important;
         border: 0.5px solid rgba(250,245,238,0.08) !important;
     }
- 
+
     /* ── Caption / small text ─────────────────────── */
     [data-testid="stCaptionContainer"] p,
     .stCaption, small {
-        color: #6C757D !important;
+        color: #7A6A5A !important;
         font-size: 0.72rem !important;
     }
- 
+
     /* ── Spinner ──────────────────────────────────── */
     [data-testid="stSpinner"] p { color: #B8A898 !important; }
- 
+
     /* ── Alerts / info ────────────────────────────── */
     [data-testid="stAlert"] {
         background: rgba(196,83,42,0.08) !important;
@@ -183,35 +190,21 @@ def inject_styles():
         border-radius: 12px !important;
         color: #FAF5EE !important;
     }
- 
+
     /* ── Expander ─────────────────────────────────── */
     [data-testid="stExpander"] {
-        background: #FFFFFF !important;
+        background: #2C2218 !important;
         border: 0.5px solid rgba(250,245,238,0.08) !important;
         border-radius: 12px !important;
     }
     [data-testid="stExpander"] summary { color: #B8A898 !important; }
- 
+
     /* ── Columns gap fix ──────────────────────────── */
     [data-testid="column"] { gap: 0 !important; }
-    @media (max-width: 768px){
-
-    [data-testid="block-container"]{
-        padding:1rem !important;
-    }
-
-    h1{
-        font-size:2rem !important;
-    }
-
-    [data-testid="stMetricValue"]{
-        font-size:1.4rem !important;
-    }
-}
     </style>
     """, unsafe_allow_html=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # MODEL DEFINITION
 # ─────────────────────────────────────────────────────────────
@@ -232,14 +225,14 @@ class NigerianFoodClassifier(nn.Module):
             nn.Dropout(p=dropout),
             nn.Linear(feat_dim // 2, num_classes),
         )
- 
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.head(self.backbone(x))
- 
+
     def get_features(self, x: torch.Tensor) -> torch.Tensor:
         return self.backbone(x)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # TRANSFORMS
 # ─────────────────────────────────────────────────────────────
@@ -262,16 +255,16 @@ def _tfm(img_size: int, flip: bool = False, brightness: float = 0.0,
         ToTensorV2(),
     ]
     return A.Compose(steps)
- 
- 
+
+
 TTA_TRANSFORMS = [
     _tfm(IMG_SIZE),
     _tfm(IMG_SIZE, flip=True),
     _tfm(IMG_SIZE, brightness=0.1),
     _tfm(IMG_SIZE, crop_frac=0.9),
 ]
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # MODEL LOADING
 # ─────────────────────────────────────────────────────────────
@@ -285,8 +278,8 @@ def load_model(checkpoint_path: str):
     model.load_state_dict(ckpt["model_state_dict"])
     model.eval()
     return model, ckpt["class_names"]
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # INFERENCE
 # ─────────────────────────────────────────────────────────────
@@ -300,8 +293,8 @@ def predict(img_pil: Image.Image, model: nn.Module, use_tta: bool = True):
         probs = F.softmax(model(x), dim=1)[0].cpu().numpy()
         all_probs.append(probs)
     return np.mean(all_probs, axis=0)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # GRAD-CAM
 # ─────────────────────────────────────────────────────────────
@@ -312,25 +305,25 @@ def gradcam_overlay(img_pil: Image.Image, model: nn.Module, class_idx: int):
         from pytorch_grad_cam.utils.image import show_cam_on_image
     except ImportError:
         return None
- 
-        target_layer = model.backbone.conv_head
-    except Exception:
-        target_layer = [
-            m for m in model.backbone.modules()
-            if isinstance(m, nn.Conv2d)
-        ][-1]
- 
+
+    last_conv = None
+    for m in model.backbone.modules():
+        if isinstance(m, nn.Conv2d):
+            last_conv = m
+    if last_conv is None:
+        return None
+
     img_np  = np.array(img_pil.convert("RGB").resize((IMG_SIZE, IMG_SIZE)), dtype=np.uint8)
     img_f32 = img_np.astype(np.float32) / 255.0
     tfm     = TTA_TRANSFORMS[0]
     x       = tfm(image=img_np)["image"].unsqueeze(0).to(DEVICE)
- 
-    cam     = GradCAMPlusPlus(model=model, target_layers=[target_layer])
+
+    cam     = GradCAMPlusPlus(model=model, target_layers=[last_conv])
     mask    = cam(input_tensor=x, targets=[ClassifierOutputTarget(class_idx)])[0]
     overlay = show_cam_on_image(img_f32, mask, use_rgb=True)
     return Image.fromarray(overlay)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # CONFIDENCE CHART  (dark theme)
 # ─────────────────────────────────────────────────────────────
@@ -338,9 +331,9 @@ def confidence_chart(class_names, probs, top_k=5):
     top_idx = probs.argsort()[-top_k:][::-1]
     names   = [class_names[i] for i in top_idx][::-1]
     values  = [float(probs[i]) for i in top_idx][::-1]
-    colors  = ["#E85D04" if i == len(values) - 1 else "#FFBA08"
+    colors  = ["#E8855A" if i == len(values) - 1 else "rgba(196,83,42,0.45)"
                for i in range(len(values))]
- 
+
     fig = go.Figure(go.Bar(
         x            = values,
         y            = names,
@@ -357,7 +350,7 @@ def confidence_chart(class_names, probs, top_k=5):
         xaxis             = dict(
             range=[0, 1.18],
             tickformat=".0%",
-            tickfont=dict(color="#6C757D", size=11),
+            tickfont=dict(color="#7A6A5A", size=11),
             gridcolor="rgba(250,245,238,0.05)",
             title="",
         ),
@@ -370,14 +363,14 @@ def confidence_chart(class_names, probs, top_k=5):
         plot_bgcolor      = "rgba(0,0,0,0)",
         font              = dict(family="DM Sans"),
         hoverlabel        = dict(
-            bgcolor="#FFFFFF",
+            bgcolor="#2C2218",
             bordercolor="rgba(196,83,42,0.4)",
             font=dict(color="#FAF5EE", family="DM Sans"),
         ),
     )
     return fig
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # HTML HELPERS
 # ─────────────────────────────────────────────────────────────
@@ -396,7 +389,7 @@ def nav_bar():
         ">
             <div style="
                 width:8px; height:8px; border-radius:50%;
-                background:#E85D04;
+                background:#C4532A;
                 animation: pulse 2.4s ease-in-out infinite;
             "></div>
             Naija Eats
@@ -405,14 +398,14 @@ def nav_bar():
             <span style="
                 background:rgba(196,83,42,0.15);
                 border:0.5px solid rgba(196,83,42,0.5);
-                color:#E85D04; padding:4px 14px; border-radius:100px;
+                color:#E8855A; padding:4px 14px; border-radius:100px;
                 font-size:0.72rem; font-weight:500;
                 letter-spacing:0.04em; text-transform:uppercase;
             ">Classify</span>
             <span style="
                 background:transparent;
                 border:0.5px solid rgba(250,245,238,0.08);
-                color:#6C757D; padding:4px 14px; border-radius:100px;
+                color:#7A6A5A; padding:4px 14px; border-radius:100px;
                 font-size:0.72rem; letter-spacing:0.04em; text-transform:uppercase;
             ">EfficientNetV2-M</span>
         </div>
@@ -424,8 +417,8 @@ def nav_bar():
     }
     </style>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def hero_headline():
     st.markdown("""
     <div style="margin-bottom: 2.5rem;">
@@ -436,37 +429,32 @@ def hero_headline():
             letter-spacing:-0.03em; color:#FAF5EE; margin:0 0 0.9rem;
         ">
             Identify any<br>
-            <em style="color:#E85D04; font-style:italic;">Nigerian dish</em><br>
+            <em style="color:#E8855A; font-style:italic;">Nigerian dish</em><br>
             instantly.
         </h1>
         <p style="
             font-size:0.95rem; line-height:1.75;
             color:#B8A898; max-width:460px; margin:0;
         ">
-            Upload a dish and instantly identify Nigerian foods — from jollof rice to egusi soup and Puff Puff —
+            Upload a photo of your meal — from jollof rice to egusi soup —
             and our fine-tuned model returns a classification with confidence
             scores in milliseconds.
         </p>
     </div>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def prediction_badge(food_name: str, confidence: float):
     if confidence >= 0.6:
-        color = "#40916C"
-        bg = "rgba(64,145,108,0.12)"
-        border = "rgba(64,145,108,0.3)"
-    
+        color, bg = "#E8855A", "rgba(196,83,42,0.12)"
+        border     = "rgba(196,83,42,0.4)"
     elif confidence >= 0.35:
-        color = "#FFBA08"
-        bg = "rgba(255,186,8,0.12)"
-        border = "rgba(255,186,8,0.3)"
-    
+        color, bg = "#E8A020", "rgba(232,160,32,0.1)"
+        border     = "rgba(232,160,32,0.35)"
     else:
-        color = "#D00000"
-        bg = "rgba(208,0,0,0.10)"
-        border = "rgba(208,0,0,0.3)"
- 
+        color, bg = "#E05C5C", "rgba(224,92,92,0.1)"
+        border     = "rgba(224,92,92,0.35)"
+
     st.markdown(f"""
     <div style="
         background:{bg}; border:1px solid {border};
@@ -507,8 +495,8 @@ def prediction_badge(food_name: str, confidence: float):
         </div>
     </div>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def inference_meta_strip(elapsed_ms: float, use_tta: bool, num_classes: int):
     tta_label = "TTA ×4 on" if use_tta else "TTA off"
     st.markdown(f"""
@@ -518,32 +506,32 @@ def inference_meta_strip(elapsed_ms: float, use_tta: bool, num_classes: int):
         border-top:0.5px solid rgba(250,245,238,0.08);
         margin-top:0.5rem;
     ">
-        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#6C757D;">
+        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#7A6A5A;">
             <span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block"></span>
             Inference: <strong style="color:#B8A898;">{elapsed_ms:.0f} ms</strong>
         </span>
-        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#6C757D;">
+        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#7A6A5A;">
             <span style="width:6px;height:6px;border-radius:50%;background:#E8A020;display:inline-block"></span>
             <strong style="color:#B8A898;">{tta_label}</strong>
         </span>
-        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#6C757D;">
-            <span style="width:6px;height:6px;border-radius:50%;background:#E85D04;display:inline-block"></span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:0.72rem;color:#7A6A5A;">
+            <span style="width:6px;height:6px;border-radius:50%;background:#C4532A;display:inline-block"></span>
             Classes: <strong style="color:#B8A898;">{num_classes}</strong>
         </span>
     </div>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def section_label(text: str):
     st.markdown(f"""
     <p style="
         font-size:0.65rem; text-transform:uppercase;
-        letter-spacing:0.1em; color:#6C757D;
+        letter-spacing:0.1em; color:#7A6A5A;
         margin:0 0 0.6rem;
     ">{text}</p>
     """, unsafe_allow_html=True)
- 
- 
+
+
 def footer():
     st.markdown("""
     <hr style="border-color:rgba(250,245,238,0.08);margin:3rem 0 1.5rem;">
@@ -551,17 +539,17 @@ def footer():
         display:flex; justify-content:space-between; flex-wrap:wrap;
         gap:0.5rem; padding-bottom:2rem;
     ">
-        <p style="font-size:0.7rem;color:#6C757D;margin:0;">
+        <p style="font-size:0.7rem;color:#7A6A5A;margin:0;">
             EfficientNetV2-M &middot; 5-fold CV &middot; Macro F1 &asymp; 0.805
             &middot; Built with PyTorch + timm + Streamlit
         </p>
-        <p style="font-size:0.7rem;color:#6C757D;margin:0;">
+        <p style="font-size:0.7rem;color:#7A6A5A;margin:0;">
             288&times;288 input &middot; Fold 0 Val F1 0.8086
         </p>
     </div>
     """, unsafe_allow_html=True)
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # SIDEBAR
 # ─────────────────────────────────────────────────────────────
@@ -575,20 +563,20 @@ def sidebar(class_names):
         ">Settings</p>
         """, unsafe_allow_html=True)
         st.markdown("<hr>", unsafe_allow_html=True)
- 
+
         use_tta  = st.toggle("Test-Time Augmentation", value=True,
                              help="Averages 4 views — more accurate, slightly slower")
         show_cam = st.toggle("Grad-CAM Overlay", value=False,
                              help="Highlights which part of the image drove the prediction")
         top_k    = st.selectbox("Top-K predictions", [3, 5, 10], index=1)
- 
+
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("""
         <p style="font-size:0.65rem;text-transform:uppercase;
-                   letter-spacing:0.08em;color:#6C757D;margin-bottom:0.5rem;">
+                   letter-spacing:0.08em;color:#7A6A5A;margin-bottom:0.5rem;">
             Model info
         </p>""", unsafe_allow_html=True)
- 
+
         info_rows = [
             ("Architecture", "EfficientNetV2-M"),
             ("Classes",      str(len(class_names))),
@@ -600,18 +588,18 @@ def sidebar(class_names):
             st.markdown(f"""
             <div style="display:flex;justify-content:space-between;
                         margin-bottom:0.3rem;">
-                <span style="font-size:0.75rem;color:#6C757D;">{label}</span>
+                <span style="font-size:0.75rem;color:#7A6A5A;">{label}</span>
                 <span style="font-size:0.75rem;color:#B8A898;font-weight:500;">{val}</span>
             </div>
             """, unsafe_allow_html=True)
- 
+
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown("""
         <p style="font-size:0.65rem;text-transform:uppercase;
-                   letter-spacing:0.08em;color:#6C757D;margin-bottom:0.5rem;">
+                   letter-spacing:0.08em;color:#7A6A5A;margin-bottom:0.5rem;">
             All classes
         </p>""", unsafe_allow_html=True)
- 
+
         for name in sorted(class_names):
             st.markdown(f"""
             <div style="
@@ -621,16 +609,16 @@ def sidebar(class_names):
                 margin:2px 2px; font-size:0.7rem; color:#B8A898;
             ">{name}</div>
             """, unsafe_allow_html=True)
- 
+
     return use_tta, show_cam, top_k
- 
- 
+
+
 # ─────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────
 def main():
     inject_styles()
- 
+
     # ── Load model ───────────────────────────────────────────
     if not Path(CHECKPOINT_PATH).exists():
         st.markdown("""
@@ -650,51 +638,30 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         st.stop()
- 
+
     model, class_names = load_model(CHECKPOINT_PATH)
+
+    # ── Sidebar ──────────────────────────────────────────────
+    use_tta, show_cam, top_k = sidebar(class_names)
 
     # ── Nav + Hero ───────────────────────────────────────────
     nav_bar()
 
-    st.markdown("### Analysis Options")
+    col_hero, col_upload = st.columns([1.1, 1], gap="large")
 
-    opt1, opt2, opt3 = st.columns(3)
-
-    with opt1:
-        use_tta = st.toggle(
-            "Test-Time Augmentation",
-            value=True,
-            help="Uses 4 augmented views"
-        )
-
-    with opt2:
-        show_cam = st.toggle(
-            "Grad-CAM",
-            value=False,
-            help="Show model attention map"
-        )
-    
-    with opt3:
-        top_k = st.selectbox(
-            "Top Predictions",
-            [3, 5, 10],
-            index=1
-        )
-        col_hero, col_upload = st.columns([1.1, 1], gap="large")
- 
     with col_hero:
         hero_headline()
- 
+
         # Stat row
         m1, m2, m3 = st.columns(3)
         m1.metric("Food classes", len(class_names))
         m2.metric("Macro F1",     "80.8%")
         m3.metric("Inference",    "<200 ms")
- 
+
     with col_upload:
         st.markdown("""
         <div style="
-            background:#FFFFFF; border:1.5px dashed rgba(196,83,42,0.35);
+            background:#2C2218; border:1.5px dashed rgba(196,83,42,0.35);
             border-radius:18px; padding:1.4rem 1.4rem 0.8rem;
             margin-top:0.5rem;
         ">
@@ -702,20 +669,20 @@ def main():
                 font-family:'Playfair Display',serif;
                 font-size:1.15rem; color:#FAF5EE; margin:0 0 0.3rem;
             ">Drop your dish here</p>
-            <p style="font-size:0.78rem;color:#6C757D;margin:0 0 0.8rem;">
+            <p style="font-size:0.78rem;color:#7A6A5A;margin:0 0 0.8rem;">
                 JPG · PNG · WEBP · up to 10 MB
             </p>
         </div>
         """, unsafe_allow_html=True)
- 
+
         uploaded = st.file_uploader(
             "Upload food image",
             type=["jpg", "jpeg", "png", "webp"],
             label_visibility="collapsed",
         )
- 
+
     st.markdown("<div style='margin-top:2.5rem'></div>", unsafe_allow_html=True)
- 
+
     # ── No image state ────────────────────────────────────────
     if uploaded is None:
         st.markdown("""
@@ -732,43 +699,43 @@ def main():
         """, unsafe_allow_html=True)
         footer()
         return
- 
+
     # ── Divider ───────────────────────────────────────────────
     st.markdown("<hr>", unsafe_allow_html=True)
- 
+
     # ── Layout: image | results ───────────────────────────────
     col_img, col_res = st.columns([1, 1], gap="large")
- 
+
     img_pil = Image.open(uploaded).convert("RGB")
- 
+
     with col_img:
         section_label("Uploaded image")
         st.image(img_pil, use_container_width=True)
         st.caption(f"Size: {img_pil.width}×{img_pil.height} px")
- 
+
     with col_res:
         section_label("Prediction")
- 
+
         with st.spinner("Classifying…"):
             t0      = time.time()
             probs   = predict(img_pil, model, use_tta=use_tta)
             elapsed = (time.time() - t0) * 1000
- 
+
         top_idx   = int(probs.argmax())
         top_class = class_names[top_idx]
         top_conf  = float(probs[top_idx])
- 
+
         prediction_badge(top_class, top_conf)
- 
+
         section_label(f"Top {top_k} predictions")
         st.plotly_chart(
             confidence_chart(class_names, probs, top_k),
             use_container_width=True,
             config={"displayModeBar": False},
         )
- 
+
         inference_meta_strip(elapsed, use_tta, len(class_names))
- 
+
     # ── Grad-CAM ──────────────────────────────────────────────
     if show_cam:
         st.markdown("<hr>", unsafe_allow_html=True)
@@ -777,14 +744,14 @@ def main():
             font-family:'Playfair Display',serif;
             font-size:1.3rem;color:#FAF5EE;margin:0 0 0.3rem;
         ">Grad-CAM — what the model is looking at</p>
-        <p style="font-size:0.8rem;color:#6C757D;margin-bottom:1.2rem;">
+        <p style="font-size:0.8rem;color:#7A6A5A;margin-bottom:1.2rem;">
             Warm regions drove the classification; cool regions were ignored.
         </p>
         """, unsafe_allow_html=True)
- 
+
         with st.spinner("Generating attention map…"):
             overlay = gradcam_overlay(img_pil, model, top_idx)
- 
+
         if overlay is not None:
             c1, c2, c3 = st.columns([1, 1, 1])
             with c1:
@@ -796,14 +763,14 @@ def main():
             with c3:
                 st.markdown("""
                 <div style="
-                    background:#FFFFFF; border:0.5px solid rgba(250,245,238,0.08);
+                    background:#2C2218; border:0.5px solid rgba(250,245,238,0.08);
                     border-radius:12px; padding:1.1rem 1.2rem;
                 ">
                     <p style="font-size:0.75rem;color:#B8A898;margin:0 0 0.6rem;font-weight:500;">
                         Reading the map
                     </p>
-                    <p style="font-size:0.78rem;color:#6C757D;line-height:1.6;margin:0;">
-                        🔴 <strong style="color:#E85D04;">Red / warm</strong> —
+                    <p style="font-size:0.78rem;color:#7A6A5A;line-height:1.6;margin:0;">
+                        🔴 <strong style="color:#E8855A;">Red / warm</strong> —
                         high activation, the model focused here.<br><br>
                         🔵 <strong style="color:#6EA8D8;">Blue / cool</strong> —
                         ignored region.<br><br>
@@ -825,9 +792,9 @@ def main():
                 </p>
             </div>
             """, unsafe_allow_html=True)
- 
+
     footer()
- 
- 
+
+
 if __name__ == "__main__":
     main()
