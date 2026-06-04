@@ -14,7 +14,7 @@ from pathlib import Path
 import plotly.graph_objects as go
 import timm
 ML_AVAILABLE = True
-except ImportError:
+    except ImportError:
 ML_AVAILABLE = False
  
 try:
