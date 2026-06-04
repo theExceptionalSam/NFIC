@@ -13,7 +13,6 @@ from PIL import Image
 from pathlib import Path
 import plotly.graph_objects as go
 import timm
-
 from pytorch_grad_cam import GradCAMPlusPlus
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 from pytorch_grad_cam.utils.image import show_cam_on_image
