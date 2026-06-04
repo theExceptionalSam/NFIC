@@ -1,3 +1,9 @@
+"""
+🍛 Nigerian Food Classifier — Redesigned Streamlit App
+Warm editorial dark UI with terracotta / amber palette.
+Loads a trained EfficientNetV2 model and classifies Nigerian food images.
+"""
+
 import io
 import time
 import warnings
@@ -23,7 +29,7 @@ st.set_page_config(
     page_title="Naija Eats",
     page_icon="🍛",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 # ─────────────────────────────────────────────────────────────
