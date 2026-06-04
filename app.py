@@ -313,7 +313,7 @@ def gradcam_overlay(img_pil: Image.Image, model: nn.Module, class_idx: int):
     except ImportError:
         return None
  
-        try:
+     try:
         target_layer = model.backbone.conv_head
     except Exception:
         target_layer = [
