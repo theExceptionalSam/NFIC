@@ -1,9 +1,3 @@
-"""
-🍜 Nigerian Food & Snacks Classifier
-Streamlit App — tf_efficientnetv2_m backbone · Custom head · Grad-CAM
-Built from: group33-nigerianfoodimageeclassification-notebook.ipynb
-"""
-
 import io
 import cv2
 import numpy as np
