@@ -2,7 +2,7 @@ streamlit
 torch
 torchvision
 timm
-opencv-python-headless
+opencv-python-headless>=4.9.0
 Pillow
 numpy
 matplotlib
